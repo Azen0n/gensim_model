@@ -1,4 +1,5 @@
 import re
+import warnings
 
 from gensim.corpora import BleiCorpus
 from gensim.models.ldamodel import LdaModel
@@ -6,31 +7,34 @@ import matplotlib.pyplot as plt
 
 from preprocessing import process_article
 
-
-def main(directory: str):
-    corpus = BleiCorpus(f'{directory}/ap.dat', f'{directory}/vocabulary.txt')
-    model = LdaModel(corpus, id2word=corpus.id2word)
-
-    plot_topic_frequency(model, corpus)
-    print_first_n_keywords(model, 64, 10)
-
-    print(model.print_topics(num_topics=10, num_words=10))
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 
-def plot_topic_frequency(model: LdaModel, corpus: BleiCorpus):
+def main():
+    plot_models(data_directory=['data', 'new_data'],
+                alpha=['symmetric', 'asymmetric'],
+                num_topics=[5, 20, 50])
+
+
+def plot_models(data_directory: list[str], alpha: list[str], num_topics: list[int]):
+    """Plots data using models with parameters from cartesian product of all parameters used."""
+    for directory in data_directory:
+        for a in alpha:
+            for num in num_topics:
+                corpus = BleiCorpus(f'{directory}/ap.dat', f'{directory}/vocabulary.txt')
+                model = LdaModel(corpus, id2word=corpus.id2word, alpha=a, num_topics=num)
+                save_topic_frequency_plot(model, corpus, filename=f'img/{directory}/{a}_{num}.jpg')
+                print(f'{directory=}, alpha={a}, num_topics={num}')
+
+
+def save_topic_frequency_plot(model: LdaModel, corpus: BleiCorpus, filename: str):
+    """Saves plot with topic frequency to filename (must include dir path)."""
     number_topics_used = [len(model[doc]) for doc in corpus]
     plt.hist(number_topics_used)
     plt.xlabel('number of topics')
     plt.ylabel('number of articles')
-    plt.show()
-
-
-def print_first_n_keywords(model: LdaModel, n: int, number_of_topics: int):
-    for i in range(number_of_topics):
-        print(f'\nArticle {i + 1}')
-        words = model.show_topic(i, n)
-        for word, probability in words:
-            print(f'\t{word}: {probability:.3f}')
+    plt.savefig(filename)
+    plt.close()
 
 
 def parse_articles(txt_path: str) -> list[str]:
@@ -112,5 +116,5 @@ def save_vocabulary_to_txt(vocabulary: dict[str, int], txt_path: str):
 
 
 if __name__ == '__main__':
-    main('data')
+    main()
     # create_new_data()
